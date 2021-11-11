@@ -36,6 +36,8 @@
         "xlocale": "cpp",
         "xlocinfo": "cpp",
         "xlocnum": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "bitset": "cpp",
+        "string": "cpp"
     }
 }

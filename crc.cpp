@@ -14,15 +14,15 @@ std::string CRC::Encode(const std::string &codeword, const size_t &genDeg)
 {
     CRC crc;
 
-
-    std::bitset<32> m(codeword);
     const size_t r = genDeg;
     const size_t k = codeword.length();
     const size_t n = k + r;
 
     std::vector<unsigned char> codewordVec = crc.ConvertToVector(codeword);
     std::vector<unsigned char> genPoly = crc.FindGeneratingPoly(n, r);
-    return "";
+    std::vector<unsigned char> coded = crc.DividePolys(codewordVec, genPoly);
+    coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end());
+    return std::string(coded.begin(), coded.end());
 }
 
 /**
@@ -38,8 +38,7 @@ std::vector<unsigned char> CRC::FindGeneratingPoly(const size_t &n, const size_t
     std::vector<std::vector<unsigned char>> middleCoefs = CRC::GenerateGrayArr(r - 1); // vytvori vektor vsech moznych kombinaci mezi krajnimi cleny polynomu g(z)
     /* Pozn.    Vzhledem k tomu, ze nalezeni ireduciblnich polynomu je pomerne slozita zalezitost, tak program vygeneruje vsechny mozne kombinace
                 takove, ze z^r bude vzdy pritomno (jinak by se nejednalo o polynum stupne r) a bude vzdy pritomna 1 (tedy z^0), jinak by se
-                nejednalo o ireducibilni polynom, jelikoz by bylo mozne vytknout x^1
-    */
+                nejednalo o ireducibilni polynom, jelikoz by bylo mozne vytknout x^1 */
 
     std::vector<unsigned char> zn(n + 1, '0'); // inicializace z^n-1 polynom
     zn[0] = '1'; // clen z^n
@@ -54,8 +53,7 @@ std::vector<unsigned char> CRC::FindGeneratingPoly(const size_t &n, const size_t
     for (const auto &i: possiblePolys)
     {
         std::vector<unsigned char> temp = CRC::DividePolys(zn, i);
-        int c = 0;
-        if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }) || temp.size() == 0) return i; // pokud jsou vsechny prvky v promenne 'temp' (vektor zbytku po deleni polynomu) rovny 0, vrati prislusny polynom
+        if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; })) return i; // pokud jsou vsechny prvky v promenne 'temp' (vektor zbytku po deleni polynomu) rovny 0, vrati prislusny polynom
     }
 
     throw std::logic_error("Nebyl nalezen generujici polynom");
@@ -92,6 +90,9 @@ std::vector<unsigned char> CRC::DividePolys(std::vector<unsigned char> nom, cons
         
         nom.erase(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
     }
+
+    while (nom.size() != denom.size() - 1)
+        nom.insert(nom.begin(), '0');
 
     return nom;
 }
