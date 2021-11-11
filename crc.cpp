@@ -2,6 +2,8 @@
 #include<algorithm>
 #include "crc.h"
 
+#include<iostream>
+
 std::string CRC::Encode(const std::string &message, const size_t &genDeg)
 {
     CRC crc;
@@ -15,21 +17,22 @@ std::string CRC::Encode(const std::string &message, const size_t &genDeg)
     return "";
 }
 
-/*
-    Funkce najde vsechny mozne generujici polynomy g(z) na zaklade zadane delky celkove zpravy 'n'
-    a stupne generujiciho polynomu 'r'
-
-    Vstup:
-        n   - delka cele zpravy (samotna zprava + generujici polynom)
-        r   - stupen generujiciho polynomu
-
-    Vystup:
-        std::vector<unsigned char>  - vektor reprezentujici generujici polynom
-*/
+/**
+ * @brief Funkce najde vsechny mozne generujici polynomy g(z) na zaklade zadane delky celkove zpravy 'n' a stupne generujiciho polynomu 'r'
+ * 
+ * @param n delka cele zpravy (samotna zprava + generujici polynom)
+ * @param r stupen generujiciho polynomu
+ * @return std::vector<unsigned char> vektor reprezentujici generujici polynom
+ */
 std::vector<unsigned char> CRC::FindGeneratingPoly(const size_t &n, const size_t &r)
 {
-    std::vector<std::vector<unsigned char>> possiblePolys(pow(r + 1, 2)/4, std::vector<unsigned char>(r + 1, '1')); // inicializuje vektor vsech moznych kombinaci generujiciho polynomu
+    std::vector<std::vector<unsigned char>> possiblePolys(pow(2, r - 1), std::vector<unsigned char>(r + 1, '1')); // inicializuje vektor vsech moznych kombinaci generujiciho polynomu
     std::vector<std::vector<unsigned char>> middleCoefs = CRC::GenerateGrayArr(r - 1); // vytvori vektor vsech moznych kombinaci mezi krajnimi cleny polynomu g(z)
+    /* Pozn.    Vzhledem k tomu, ze nalezeni ireduciblnich polynomu je pomerne slozita zalezitost, tak program vygeneruje vsechny mozne kombinace
+                takove, ze z^r bude vzdy pritomno (jinak by se nejednalo o polynum stupne r) a bude vzdy pritomna 1 (tedy z^0), jinak by se
+                nejednalo o ireducibilni polynom, jelikoz by bylo mozne vytknout x^1
+    */
+
     std::vector<unsigned char> zn(n + 1, '0'); // inicializace z^n-1 polynom
     zn[0] = '1'; // clen z^n
     zn[zn.size() - 1] = '1'; // clen 1
@@ -43,21 +46,19 @@ std::vector<unsigned char> CRC::FindGeneratingPoly(const size_t &n, const size_t
     for (const auto &i: possiblePolys)
     {
         std::vector<unsigned char> temp = CRC::DividePolys(zn, i);
-        if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; })) return i; // pokud jsou vsechny prvky v promenne 'temp' (vektor zbytku po deleni polynomu) rovny 0, vrati prislusny polynom
+        int c = 0;
+        if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }) || temp.size() == 0) return i; // pokud jsou vsechny prvky v promenne 'temp' (vektor zbytku po deleni polynomu) rovny 0, vrati prislusny polynom
     }
 
-    return std::vector<unsigned char>(-1); // neco se nepovedlo
+    throw std::logic_error("Nebyl nalezen generujici polynom");
 }
 
-/*
-    Prevede textovy retezec na vektor tak, ze jeden znak v retezci se stane jednim prvkem ve vektoru
-
-    Vstup:
-        str   - textovy retezec
-
-    Vystup:
-        std::vector<unsigned char>  - textovy retezec prevedeny na vektor
-*/
+/**
+ * @brief Prevede textovy retezec na vektor tak, ze jeden znak v retezci se stane jednim prvkem ve vektoru
+ * 
+ * @param str textovy retezec
+ * @return std::vector<unsigned char> textovy retezec prevedeny na vektor
+ */
 std::vector<unsigned char> CRC::ConvertToVector(const std::string &str)
 {
     std::vector<unsigned char> retVec;
@@ -67,16 +68,13 @@ std::vector<unsigned char> CRC::ConvertToVector(const std::string &str)
     return retVec;
 }
 
-/*
-    Provede deleni polynomu nad telesem GF(2) a navrati zbytek
-
-    Vstup:
-        nom     - citatel
-        denom   - jmenovatel
-
-    Vystup:
-        std::vector<unsigned char>  - zbytek po deleni
-*/
+/**
+ * @brief Provede deleni polynomu nad telesem GF(2) a navrati zbytek
+ * 
+ * @param nom citatel
+ * @param denom jmenovatel
+ * @return std::vector<unsigned char> zbytek po deleni
+ */
 std::vector<unsigned char> CRC::DividePolys(std::vector<unsigned char> nom, const std::vector<unsigned char> &denom)
 {
     while (nom.size() >= denom.size())
@@ -90,25 +88,22 @@ std::vector<unsigned char> CRC::DividePolys(std::vector<unsigned char> nom, cons
     return nom;
 }
 
-/*
-    Vygeneruje vsechny mozne permutace 'n' bitu
-
-    Vstup:
-        n   - pozadovany pocet bitu
-
-    Vystup:
-        std::vector<std::vector<unsigned char>>  - vektor obsahujici vektory vsech moznych permutaci
-*/
+/**
+ * @brief Vygeneruje vsechny mozne permutace 'n' bitu
+ * 
+ * @param n pozadovany pocet bitu
+ * @return std::vector<std::vector<unsigned char>> vektor obsahujici vektory vsech moznych permutaci
+ */
 std::vector<std::vector<unsigned char>> CRC::GenerateGrayArr(const size_t &n) 
 {  
-    std::vector<std::string> arr; 
+    std::vector<std::string> arr;
   
     arr.push_back("0"); 
     arr.push_back("1"); 
   
     // Every iteration of this loop generates 2*i codes from previously 
     // generated i codes. 
-    int i, j; 
+    size_t i, j; 
     for (i = 2; i < (1<<n); i = i<<1) 
     { 
         // Enter the prviously generated codes again in arr[] in reverse 
