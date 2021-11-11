@@ -1,18 +1,26 @@
 #include<math.h>
 #include<algorithm>
-#include "crc.h"
+#include<bitset>
+#include"crc.h"
 
-#include<iostream>
-
-std::string CRC::Encode(const std::string &message, const size_t &genDeg)
+/**
+ * @brief Zakoduje zadanou zpravu se zabecpenim zadaneho stupne
+ * 
+ * @param codeword Zprava k zakodovani
+ * @param genDeg Stupen generujiciho polynomu
+ * @return std::string Zakodovana zprava
+ */
+std::string CRC::Encode(const std::string &codeword, const size_t &genDeg)
 {
     CRC crc;
 
+
+    std::bitset<32> m(codeword);
     const size_t r = genDeg;
-    const size_t k = message.length();
+    const size_t k = codeword.length();
     const size_t n = k + r;
 
-    std::vector<unsigned char> messageVec = crc.ConvertToVector(message);
+    std::vector<unsigned char> codewordVec = crc.ConvertToVector(codeword);
     std::vector<unsigned char> genPoly = crc.FindGeneratingPoly(n, r);
     return "";
 }
@@ -103,7 +111,7 @@ std::vector<std::vector<unsigned char>> CRC::GenerateGrayArr(const size_t &n)
   
     // Every iteration of this loop generates 2*i codes from previously 
     // generated i codes. 
-    size_t i, j; 
+    int i, j; 
     for (i = 2; i < (1<<n); i = i<<1) 
     { 
         // Enter the prviously generated codes again in arr[] in reverse 

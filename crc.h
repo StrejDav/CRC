@@ -1,6 +1,5 @@
 #include<vector>
 
-
 class CRC
 {
 private:
@@ -9,7 +8,7 @@ private:
     std::vector<std::vector<unsigned char>> GenerateGrayArr(const size_t &n);
     std::vector<unsigned char> DividePolys(std::vector<unsigned char> nom, const std::vector<unsigned char> &denom);
 public:
-    static std::string Encode(const std::string &message, const size_t &genDeg);
+    static std::string Encode(const std::string &codeword, const size_t &genDeg);
 };
 
 inline unsigned char XOR(const unsigned char &a, const unsigned char &b)
