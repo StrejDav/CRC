@@ -1,6 +1,3 @@
-#include<math.h>
-#include<algorithm>
-#include<bitset>
 #include"crc.h"
 
 /**
@@ -15,14 +12,31 @@ std::string CRC::Encode(const std::string &codeword, const size_t &genDeg)
     CRC crc;
 
     const size_t r = genDeg;
-    const size_t k = codeword.length();
-    const size_t n = k + r;
+    const size_t n = codeword.length() + r;
 
-    std::vector<unsigned char> codewordVec = crc.ConvertToVector(codeword);
-    std::vector<unsigned char> genPoly = crc.FindGeneratingPoly(n, r);
-    std::vector<unsigned char> coded = crc.DividePolys(codewordVec, genPoly);
-    coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end());
+    BinVec codewordVec = crc.ConvertToVector(codeword);
+    codewordVec.resize(n, '0');
+
+    BinVec genPoly = crc.FindGeneratingPoly(n, r);
+    BinVec coded = crc.DividePolys(codewordVec, genPoly);
+    coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end() - r);
     return std::string(coded.begin(), coded.end());
+}
+
+std::string CRC::Decode(const std::string &encoded, const size_t &genDeg)
+{
+    CRC crc;
+
+    const size_t r = genDeg;
+    const size_t n = encoded.length();
+
+    //const std::string codeword = encoded.substr(0, encoded.size() - r - 1);
+
+    BinVec encodedVec = crc.ConvertToVector(encoded);
+    BinVec genPoly = crc.FindGeneratingPoly(n, r);
+    BinVec rem = crc.DividePolys(encodedVec, genPoly);
+    //coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end());
+    //return std::string(coded.begin(), coded.end());
 }
 
 /**
@@ -30,44 +44,39 @@ std::string CRC::Encode(const std::string &codeword, const size_t &genDeg)
  * 
  * @param n delka cele zpravy (samotna zprava + generujici polynom)
  * @param r stupen generujiciho polynomu
- * @return std::vector<unsigned char> vektor reprezentujici generujici polynom
+ * @return BinVec vektor reprezentujici generujici polynom
  */
-std::vector<unsigned char> CRC::FindGeneratingPoly(const size_t &n, const size_t &r)
+BinVec CRC::FindGeneratingPoly(const size_t &n, const size_t &r)
 {
-    std::vector<std::vector<unsigned char>> possiblePolys(pow(2, r - 1), std::vector<unsigned char>(r + 1, '1')); // inicializuje vektor vsech moznych kombinaci generujiciho polynomu
-    std::vector<std::vector<unsigned char>> middleCoefs = CRC::GenerateGrayArr(r - 1); // vytvori vektor vsech moznych kombinaci mezi krajnimi cleny polynomu g(z)
-    /* Pozn.    Vzhledem k tomu, ze nalezeni ireduciblnich polynomu je pomerne slozita zalezitost, tak program vygeneruje vsechny mozne kombinace
-                takove, ze z^r bude vzdy pritomno (jinak by se nejednalo o polynum stupne r) a bude vzdy pritomna 1 (tedy z^0), jinak by se
-                nejednalo o ireducibilni polynom, jelikoz by bylo mozne vytknout x^1 */
+    BinVec possiblePoly(2, '1');
 
-    std::vector<unsigned char> zn(n + 1, '0'); // inicializace z^n-1 polynom
-    zn[0] = '1'; // clen z^n
-    zn[zn.size() - 1] = '1'; // clen 1
+    BinVec zn(n + 1, '0');
+    zn[0] = '1';
+    zn[zn.size() - 1] = '1';
 
-    // vygeneruje polynomy vsech moznych kombinaci g(z)
-    for (size_t i = 0; i < possiblePolys.size(); i++)
-        for (size_t j = 1; j < possiblePolys[i].size() - 1; j++)
-            possiblePolys[i][j] = middleCoefs[i][j - 1];
-
-    // projde vsechny vygenerovane polynomy g(z) a najde takovy, ktery deli polynom z^n-1 beze zbytku
-    for (const auto &i: possiblePolys)
+    for (size_t i = 0; i < pow(2, r - 1); i++)
     {
-        std::vector<unsigned char> temp = CRC::DividePolys(zn, i);
-        if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; })) return i; // pokud jsou vsechny prvky v promenne 'temp' (vektor zbytku po deleni polynomu) rovny 0, vrati prislusny polynom
+        CRC::MakeMiddleCoefs(possiblePoly, i, r + 1);
+        BinVec temp = CRC::DividePolys(zn, possiblePoly);
+
+        if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }))
+            return possiblePoly;
+
+        possiblePoly.erase(possiblePoly.begin() + 1, possiblePoly.end() - 1);
     }
 
-    throw std::logic_error("Nebyl nalezen generujici polynom");
+    throw std::runtime_error("Nebyl nalezen generujici polynom");
 }
 
 /**
  * @brief Prevede textovy retezec na vektor tak, ze jeden znak v retezci se stane jednim prvkem ve vektoru
  * 
  * @param str textovy retezec
- * @return std::vector<unsigned char> textovy retezec prevedeny na vektor
+ * @return BinVec textovy retezec prevedeny na vektor
  */
-std::vector<unsigned char> CRC::ConvertToVector(const std::string &str)
+BinVec CRC::ConvertToVector(const std::string &str)
 {
-    std::vector<unsigned char> retVec;
+    BinVec retVec;
 
     for (const auto &i: str) retVec.push_back(i);
 
@@ -79,9 +88,9 @@ std::vector<unsigned char> CRC::ConvertToVector(const std::string &str)
  * 
  * @param nom citatel
  * @param denom jmenovatel
- * @return std::vector<unsigned char> zbytek po deleni
+ * @return BinVec zbytek po deleni
  */
-std::vector<unsigned char> CRC::DividePolys(std::vector<unsigned char> nom, const std::vector<unsigned char> &denom)
+BinVec CRC::DividePolys(BinVec nom, const BinVec &denom)
 {
     while (nom.size() >= denom.size())
     {
@@ -98,41 +107,17 @@ std::vector<unsigned char> CRC::DividePolys(std::vector<unsigned char> nom, cons
 }
 
 /**
- * @brief Vygeneruje vsechny mozne permutace 'n' bitu
+ * @brief Vygeneruje 'i'-tou kombinaci bitu o delce 'size'
  * 
- * @param n pozadovany pocet bitu
- * @return std::vector<std::vector<unsigned char>> vektor obsahujici vektory vsech moznych permutaci
+ * @param possiblePoly Mozny generujici polynom
+ * @param i i-ta kombinace (decimalni cislo i bude prevedeno na binarni cislo)
+ * @param size velikost polynomu (r + 1)
  */
-std::vector<std::vector<unsigned char>> CRC::GenerateGrayArr(const size_t &n) 
-{  
-    std::vector<std::string> arr;
-  
-    arr.push_back("0"); 
-    arr.push_back("1"); 
-  
-    // Every iteration of this loop generates 2*i codes from previously 
-    // generated i codes. 
-    int i, j; 
-    for (i = 2; i < (1<<n); i = i<<1) 
-    { 
-        // Enter the prviously generated codes again in arr[] in reverse 
-        // order. Nor arr[] has double number of codes. 
-        for (j = i-1 ; j >= 0 ; j--) 
-            arr.push_back(arr[j]); 
-  
-        // append 0 to the first half 
-        for (j = 0 ; j < i ; j++) 
-            arr[j] = "0" + arr[j]; 
-  
-        // append 1 to the second half 
-        for (j = i ; j < 2*i ; j++) 
-            arr[j] = "1" + arr[j]; 
+const void CRC::MakeMiddleCoefs(BinVec &possiblePoly, size_t i, const size_t &size)
+{
+    while (possiblePoly.size() < size)
+    {
+        possiblePoly.insert(possiblePoly.begin() + 1, i % 2 + '0');
+        i = i / 2;
     }
-    
-    std::vector<std::vector<unsigned char>> retVec;
-
-    for (const auto &i: arr)
-        retVec.push_back(CRC::ConvertToVector(i));
-
-    return retVec;
 }
