@@ -2,18 +2,32 @@
 #include<algorithm>
 #include<vector>
 
-#define BinVec std::vector<unsigned char>
+#define Polynomial std::vector<unsigned char>
+
 
 class CRC
 {
 private:
-    BinVec ConvertToVector(const std::string &str);
-    BinVec FindGeneratingPoly(const size_t &n, const size_t &r);
-    std::vector<BinVec> GenerateGrayArr(const size_t &n) ;
-    BinVec DividePolys(BinVec nom, const BinVec &denom);
-    const void MakeMiddleCoefs(BinVec &possiblePoly, size_t i, const size_t &size);
+    struct GeneratingPolynomial_t
+    {
+        size_t n;
+        size_t r;
+        Polynomial polynomial;
+    };
+
+    std::vector<GeneratingPolynomial_t> generatingPolynomials;
+
+    Polynomial ConvertToVector(const std::string &str);
+    std::vector<Polynomial> GenerateGrayArr(const size_t &n) ;
+    Polynomial DividePolynomials(Polynomial nom, const Polynomial &denom);
+    const void MakeMiddleCoefs(Polynomial &possiblePoly, size_t i, const size_t &size);
+    
 public:
-    static std::string Encode(const std::string &codeword, const size_t &genDeg);
+    size_t FindHammingCode(const size_t &k);
+    std::string PrettifyPolynomialVector(const Polynomial &polynomial);
+    std::vector<Polynomial> ReturnGeneratingPolynomials(const size_t &n, const size_t &r);
+    const void FindGeneratingPolynomials(const size_t &n, const size_t &r);
+    std::string Encode(const std::string &codeword, const Polynomial &generatingPolynomial);
     static std::string Decode(const std::string &codeword, const size_t &genDeg);
 };
 

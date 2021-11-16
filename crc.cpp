@@ -1,4 +1,6 @@
 #include"crc.h"
+#include<string>
+#include<stdexcept>
 
 /**
  * @brief Zakoduje zadanou zpravu se zabecpenim zadaneho stupne
@@ -7,22 +9,20 @@
  * @param genDeg Stupen generujiciho polynomu
  * @return std::string Zakodovana zprava
  */
-std::string CRC::Encode(const std::string &codeword, const size_t &genDeg)
+std::string CRC::Encode(const std::string &codeword, const Polynomial &generatingPolynomial)
 {
-    CRC crc;
-
-    const size_t r = genDeg;
+    const size_t r = generatingPolynomial.size() - 1;
     const size_t n = codeword.length() + r;
 
-    BinVec codewordVec = crc.ConvertToVector(codeword);
+    Polynomial codewordVec = CRC::ConvertToVector(codeword);
     codewordVec.resize(n, '0');
-
-    BinVec genPoly = crc.FindGeneratingPoly(n, r);
-    BinVec coded = crc.DividePolys(codewordVec, genPoly);
+    
+    Polynomial coded = CRC::DividePolynomials(codewordVec, generatingPolynomial);
     coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end() - r);
+
     return std::string(coded.begin(), coded.end());
 }
-
+/*
 std::string CRC::Decode(const std::string &encoded, const size_t &genDeg)
 {
     CRC crc;
@@ -32,51 +32,55 @@ std::string CRC::Decode(const std::string &encoded, const size_t &genDeg)
 
     //const std::string codeword = encoded.substr(0, encoded.size() - r - 1);
 
-    BinVec encodedVec = crc.ConvertToVector(encoded);
-    BinVec genPoly = crc.FindGeneratingPoly(n, r);
-    BinVec rem = crc.DividePolys(encodedVec, genPoly);
+    Polynomial encodedVec = crc.ConvertToVector(encoded);
+    Polynomial genPoly = crc.FindGeneratingPolynomials(n, r);
+    Polynomial rem = crc.DividePolynomials(encodedVec, genPoly);
     //coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end());
     //return std::string(coded.begin(), coded.end());
-}
+}*/
 
 /**
  * @brief Funkce najde vsechny mozne generujici polynomy g(z) na zaklade zadane delky celkove zpravy 'n' a stupne generujiciho polynomu 'r'
  * 
  * @param n delka cele zpravy (samotna zprava + generujici polynom)
  * @param r stupen generujiciho polynomu
- * @return BinVec vektor reprezentujici generujici polynom
+ * @return Polynomial vektor reprezentujici generujici polynom
  */
-BinVec CRC::FindGeneratingPoly(const size_t &n, const size_t &r)
+const void CRC::FindGeneratingPolynomials(const size_t &n, const size_t &r)
 {
-    BinVec possiblePoly(2, '1');
+    bool undefined = true;
+    Polynomial possiblePoly(2, '1');
 
-    BinVec zn(n + 1, '0');
+    Polynomial zn(n + 1, '0');
     zn[0] = '1';
     zn[zn.size() - 1] = '1';
 
     for (size_t i = 0; i < pow(2, r - 1); i++)
     {
         CRC::MakeMiddleCoefs(possiblePoly, i, r + 1);
-        BinVec temp = CRC::DividePolys(zn, possiblePoly);
+        Polynomial temp = CRC::DividePolynomials(zn, possiblePoly);
 
         if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }))
-            return possiblePoly;
+        {
+            CRC::generatingPolynomials.push_back({n, r, possiblePoly});
+            undefined = false;
+        }
 
         possiblePoly.erase(possiblePoly.begin() + 1, possiblePoly.end() - 1);
     }
 
-    throw std::runtime_error("Nebyl nalezen generujici polynom");
+    if (undefined) throw std::runtime_error("Pro zadanou kombinaci delky zpravy a stupne generujiciho polynomu nebyl nalezen generujici polynom");
 }
 
 /**
  * @brief Prevede textovy retezec na vektor tak, ze jeden znak v retezci se stane jednim prvkem ve vektoru
  * 
  * @param str textovy retezec
- * @return BinVec textovy retezec prevedeny na vektor
+ * @return Polynomial textovy retezec prevedeny na vektor
  */
-BinVec CRC::ConvertToVector(const std::string &str)
+Polynomial CRC::ConvertToVector(const std::string &str)
 {
-    BinVec retVec;
+    Polynomial retVec;
 
     for (const auto &i: str) retVec.push_back(i);
 
@@ -88,9 +92,9 @@ BinVec CRC::ConvertToVector(const std::string &str)
  * 
  * @param nom citatel
  * @param denom jmenovatel
- * @return BinVec zbytek po deleni
+ * @return Polynomial zbytek po deleni
  */
-BinVec CRC::DividePolys(BinVec nom, const BinVec &denom)
+Polynomial CRC::DividePolynomials(Polynomial nom, const Polynomial &denom)
 {
     while (nom.size() >= denom.size())
     {
@@ -113,11 +117,56 @@ BinVec CRC::DividePolys(BinVec nom, const BinVec &denom)
  * @param i i-ta kombinace (decimalni cislo i bude prevedeno na binarni cislo)
  * @param size velikost polynomu (r + 1)
  */
-const void CRC::MakeMiddleCoefs(BinVec &possiblePoly, size_t i, const size_t &size)
+const void CRC::MakeMiddleCoefs(Polynomial &possiblePoly, size_t i, const size_t &size)
 {
     while (possiblePoly.size() < size)
     {
         possiblePoly.insert(possiblePoly.begin() + 1, i % 2 + '0');
         i = i / 2;
+    }
+}
+
+std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &n, const size_t &r)
+{
+    std::vector<Polynomial> retVec;
+
+    for (const auto &i: CRC::generatingPolynomials)
+    {
+        if (i.n == n && i.r == r) retVec.push_back(i.polynomial);
+    }
+
+    return retVec;
+}
+
+std::string CRC::PrettifyPolynomialVector(const Polynomial &polynomial)
+{
+    std::string retStr;
+    const size_t len = polynomial.size();
+
+    for (size_t i = 0; i < len - 2; i++)
+    {
+        if (polynomial[i] == '1')
+            retStr.append("x^" + std::to_string(len - i - 1) + " + ");
+    }
+
+    if (polynomial[len - 2] == '1')
+        retStr.append("x + ");
+    retStr.append("1");
+
+    return retStr;
+}
+
+size_t CRC::FindHammingCode(const size_t &k)
+{
+    size_t r = 1;
+    size_t n;
+    while(true)
+    {
+        n = pow(2, r) - 1;
+        if (n - r == k)
+            return r;
+        else if (n - r > k)
+            throw std::runtime_error("Neplatna delka kodoveho slova pro vygenerovani Hammingova kodu");
+        r++;
     }
 }

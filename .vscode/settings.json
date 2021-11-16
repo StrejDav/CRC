@@ -38,6 +38,11 @@
         "xlocnum": "cpp",
         "algorithm": "cpp",
         "bitset": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "atomic": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "iterator": "cpp",
+        "cctype": "cpp"
     }
 }
