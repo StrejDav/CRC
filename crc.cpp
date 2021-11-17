@@ -22,22 +22,34 @@ std::string CRC::Encode(const std::string &codeword, const Polynomial &generatin
 
     return std::string(coded.begin(), coded.end());
 }
-/*
-std::string CRC::Decode(const std::string &encoded, const size_t &genDeg)
-{
-    CRC crc;
 
-    const size_t r = genDeg;
+std::pair<Polynomial, size_t> CRC::Decode(const std::string &encoded, const Polynomial &generatingPolynomial)
+{
+    const size_t r = encoded.size() - generatingPolynomial.size() - 1;
     const size_t n = encoded.length();
 
-    //const std::string codeword = encoded.substr(0, encoded.size() - r - 1);
+    size_t errorPos = 0;
 
-    Polynomial encodedVec = crc.ConvertToVector(encoded);
-    Polynomial genPoly = crc.FindGeneratingPolynomials(n, r);
-    Polynomial rem = crc.DividePolynomials(encodedVec, genPoly);
-    //coded.insert(coded.begin(), codewordVec.begin(), codewordVec.end());
-    //return std::string(coded.begin(), coded.end());
-}*/
+    Polynomial encodedVec = CRC::ConvertToVector(encoded);
+    Polynomial decoded(encodedVec.begin(), encodedVec.end() - generatingPolynomial.size() - 1);
+    
+    Polynomial error = CRC::DividePolynomials(encodedVec, generatingPolynomial);
+    error.erase(error.begin(), std::find(error.begin(), error.end(), '1'));
+
+    if (error.size() != 0)
+    {
+        Polynomial temp = CRC::DividePolynomials(error, generatingPolynomial);
+        if (!std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }))
+            errorPos = -1;
+        else
+        {
+            errorPos = CRC::BinToDec(error);
+            CRC::RepairError(decoded, errorPos);
+        }
+    }
+
+    return std::pair<Polynomial, size_t>{decoded, errorPos};
+}
 
 /**
  * @brief Funkce najde vsechny mozne generujici polynomy g(z) na zaklade zadane delky celkove zpravy 'n' a stupne generujiciho polynomu 'r'
@@ -67,7 +79,6 @@ std::vector<Polynomial> CRC::FindGeneratingPolynomials(const size_t &n, const si
             retVec.push_back(possiblePoly);
             undefined = false;
         }
-
         possiblePoly.erase(possiblePoly.begin() + 1, possiblePoly.end() - 1);
     }
 
@@ -145,6 +156,7 @@ std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &n, const 
     return retVec;
 }
 
+/* Unused for now
 std::string CRC::PrettifyPolynomialVector(const Polynomial &polynomial)
 {
     std::string retStr;
@@ -162,6 +174,7 @@ std::string CRC::PrettifyPolynomialVector(const Polynomial &polynomial)
 
     return retStr;
 }
+*/
 
 size_t CRC::FindHammingCode(const size_t &k)
 {
@@ -176,4 +189,23 @@ size_t CRC::FindHammingCode(const size_t &k)
             throw std::runtime_error("Neplatna delka kodoveho slova pro vygenerovani Hammingova kodu");
         r++;
     }
+}
+
+size_t CRC::BinToDec(const Polynomial &errorBinaryPosition)
+{
+    size_t dec = 0;
+    size_t len = errorBinaryPosition.size();
+
+    for (size_t i = 0; i < len; i++)
+    {
+        dec += (errorBinaryPosition[i] - '0')*pow(2, len - i - 1);
+    }
+
+    return dec;
+}
+
+const void CRC::RepairError(Polynomial &decodedPolynomial, const size_t &position)
+{
+    unsigned char *repairElement = &decodedPolynomial[decodedPolynomial.size() - position - 1];
+    *repairElement = *repairElement == '1' ? '0' : '1';
 }

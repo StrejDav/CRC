@@ -11,18 +11,17 @@ int main()
     int flag;
 
     string message;
-    string r_string;
-    int r;
+    size_t r;
     size_t n;
     size_t choice;
 
 
     cout << "Zadejte zpravu: ";
     cin >> message;
-    cout << "Zadejte stupen generujiciho polynomu nebo zadejte -1 pro automaticke urceni: ";
+    cout << "Zadejte stupen generujiciho polynomu nebo zadejte 0 pro automaticke urceni Hammingovym kodem: ";
     cin >> r;
 
-    if (r == -1)
+    if (r == 0)
     {
         try
         {
@@ -38,7 +37,7 @@ int main()
 
     n = r + message.size();
     std::vector<Polynomial> gens = crc.ReturnGeneratingPolynomials(n, r);
-    int c = 1; 
+    int c = 1;
 
     cout << "Generujici polynomy jsou:\n";
 
