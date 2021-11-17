@@ -31,6 +31,7 @@ int main()
         catch(const std::exception& e)
         {
             cout << e.what() << '\n';
+            cin >> flag;
             return -1;
         }   
     }
