@@ -33,11 +33,10 @@ int main()
             cout << e.what() << '\n';
             cin >> flag;
             return -1;
-        }   
+        }
     }
 
     n = r + message.size();
-    crc.FindGeneratingPolynomials(n, r);
     std::vector<Polynomial> gens = crc.ReturnGeneratingPolynomials(n, r);
     int c = 1; 
 

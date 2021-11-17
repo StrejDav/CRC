@@ -46,8 +46,9 @@ std::string CRC::Decode(const std::string &encoded, const size_t &genDeg)
  * @param r stupen generujiciho polynomu
  * @return Polynomial vektor reprezentujici generujici polynom
  */
-const void CRC::FindGeneratingPolynomials(const size_t &n, const size_t &r)
+std::vector<Polynomial> CRC::FindGeneratingPolynomials(const size_t &n, const size_t &r)
 {
+    std::vector<Polynomial> retVec;
     bool undefined = true;
     Polynomial possiblePoly(2, '1');
 
@@ -63,6 +64,7 @@ const void CRC::FindGeneratingPolynomials(const size_t &n, const size_t &r)
         if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }))
         {
             CRC::generatingPolynomials.push_back({n, r, possiblePoly});
+            retVec.push_back(possiblePoly);
             undefined = false;
         }
 
@@ -70,6 +72,8 @@ const void CRC::FindGeneratingPolynomials(const size_t &n, const size_t &r)
     }
 
     if (undefined) throw std::runtime_error("Pro zadanou kombinaci delky zpravy a stupne generujiciho polynomu nebyl nalezen generujici polynom");
+
+    return retVec;
 }
 
 /**
@@ -134,6 +138,9 @@ std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &n, const 
     {
         if (i.n == n && i.r == r) retVec.push_back(i.polynomial);
     }
+
+    if (retVec.size() == 0)
+        retVec = CRC::FindGeneratingPolynomials(n, r);
 
     return retVec;
 }

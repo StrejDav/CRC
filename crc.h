@@ -21,12 +21,12 @@ private:
     std::vector<Polynomial> GenerateGrayArr(const size_t &n) ;
     Polynomial DividePolynomials(Polynomial nom, const Polynomial &denom);
     const void MakeMiddleCoefs(Polynomial &possiblePoly, size_t i, const size_t &size);
+    std::vector<Polynomial> FindGeneratingPolynomials(const size_t &n, const size_t &r);
     
 public:
     size_t FindHammingCode(const size_t &k);
     std::string PrettifyPolynomialVector(const Polynomial &polynomial);
     std::vector<Polynomial> ReturnGeneratingPolynomials(const size_t &n, const size_t &r);
-    const void FindGeneratingPolynomials(const size_t &n, const size_t &r);
     std::string Encode(const std::string &codeword, const Polynomial &generatingPolynomial);
     static std::string Decode(const std::string &codeword, const size_t &genDeg);
 };
