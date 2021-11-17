@@ -8,11 +8,14 @@ int main()
 {
     CRC crc;
 
+    int flag;
+
     string message;
     string r_string;
     int r;
     size_t n;
     size_t choice;
+
 
     cout << "Zadejte zpravu: ";
     cin >> message;
@@ -49,4 +52,8 @@ int main()
     cin >> choice;
 
     cout << "Vysledna odeslana zprava: " << crc.Encode(message, gens[choice - 1]);
+
+    cin >> flag;
+
+    return EXIT_SUCCESS;
 }
