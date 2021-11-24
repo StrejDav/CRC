@@ -43,6 +43,7 @@
         "compare": "cpp",
         "concepts": "cpp",
         "iterator": "cpp",
-        "cctype": "cpp"
+        "cctype": "cpp",
+        "microui.c": "cpp"
     }
 }
