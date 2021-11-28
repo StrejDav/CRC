@@ -17,20 +17,19 @@ private:
 
     std::vector<GeneratingPolynomial_t> generatingPolynomials;
 
-    Polynomial ConvertToVector(const std::string &str);
     std::vector<Polynomial> GenerateGrayArr(const size_t &n) ;
     Polynomial DividePolynomials(Polynomial nom, const Polynomial &denom);
     const void MakeMiddleCoefs(Polynomial &possiblePoly, size_t i, const size_t &size);
     std::vector<Polynomial> FindGeneratingPolynomials(const size_t &n, const size_t &r);
-    size_t BinToDec(const Polynomial &errorBinaryPosition);
     const void RepairError(Polynomial &decodedPolynomial, const size_t &position);
     
 public:
+    Polynomial ConvertToVector(const std::string &str);
     size_t FindHammingCode(const size_t &k);
-    std::string PrettifyPolynomialVector(const Polynomial &polynomial);
-    std::vector<Polynomial> ReturnGeneratingPolynomials(const size_t &n, const size_t &r, bool &success);
+    std::vector<Polynomial> ReturnGeneratingPolynomials(const size_t &n, const size_t &r);
     std::string Encode(const std::string &codeword, const Polynomial &generatingPolynomial);
-    std::tuple<Polynomial, bool, size_t> Decode(const std::string &codeword, const Polynomial &generatingPolynomial);
+    std::tuple<std::string, bool, size_t> Decode(const std::string &codeword, const Polynomial &generatingPolynomial);
+    static std::string PrettifyPolynomialVector(const Polynomial &polynomial);
 };
 
 inline unsigned char XOR(const unsigned char &a, const unsigned char &b)

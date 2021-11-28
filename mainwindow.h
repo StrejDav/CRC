@@ -9,7 +9,6 @@
 #include <QPushButton>
 
 #include <regex>
-#include "choosegenpoly.h"
 #include "src/crc.h"
 
 QT_BEGIN_NAMESPACE
@@ -26,9 +25,18 @@ public:
 
 private slots:
     void on_button_Encode_clicked();
+    void GenPolyAccepted();
+
+    void on_button_Decode_clicked();
 
 private:
     Ui::MainWindow *ui;
-    CRC crc;
+    CRC *crc;
+    QDialog *chooseGenPolyDialog;
+    QBoxLayout *genPolyLayout;
+    std::vector<QRadioButton *> genPolyRBtnsPolys;
+
+    std::vector<Polynomial> generatingPolynomials;
+    Polynomial *genPoly;
 };
 #endif // MAINWINDOW_H

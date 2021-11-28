@@ -10,17 +10,14 @@ CONFIG += c++11
 INCLUDEPATH += src
 
 SOURCES += \
-    choosegenpoly.cpp \
     main.cpp \
     mainwindow.cpp \
     src/crc.cpp
 
 HEADERS += \
-    choosegenpoly.h \
     mainwindow.h
 
 FORMS += \
-    choosegenpoly.ui \
     mainwindow.ui
 
 # Default rules for deployment.

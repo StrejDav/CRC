@@ -44,6 +44,13 @@
         "concepts": "cpp",
         "iterator": "cpp",
         "cctype": "cpp",
-        "microui.c": "cpp"
+        "microui.c": "cpp",
+        "ctime": "cpp",
+        "locale": "cpp",
+        "regex": "cpp",
+        "xlocbuf": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xloctime": "cpp"
     }
 }

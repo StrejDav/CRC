@@ -2,13 +2,16 @@
 #include<string>
 #include<stdexcept>
 
-/**
- * @brief Zakoduje zadanou zpravu se zabecpenim zadaneho stupne
- * 
- * @param codeword Zprava k zakodovani
- * @param genDeg Stupen generujiciho polynomu
- * @return std::string Zakodovana zprava
- */
+/*
+* Zakoduje kod 'codeword' generujicim polynonem 'generatingPolynomial'
+*
+* Vstup:
+*   codeword    - kodove slovo
+*   generatingPolynomial    - generujici polynom
+* 
+* Vystup:
+*   std::string - kodove slovo se zabezpecenim   
+*/
 std::string CRC::Encode(const std::string &codeword, const Polynomial &generatingPolynomial)
 {
     const size_t r = generatingPolynomial.size() - 1;
@@ -23,16 +26,29 @@ std::string CRC::Encode(const std::string &codeword, const Polynomial &generatin
     return std::string(coded.begin(), coded.end());
 }
 
-std::tuple<Polynomial, bool, size_t> CRC::Decode(const std::string &encoded, const Polynomial &generatingPolynomial)
+/*
+* Dekoduje kod 'encoded' zabezpecene generujicim polynonem 'generatingPolynomial'
+*
+* Vstup:
+*   encoded    - zabezpeceny kod
+*   generatingPolynomial    - generujici polynom
+* 
+* Vystup:
+*   std::tuple<std::string, bool, size_t>
+*       std::string - opraveny zabezpeceny kod
+*       bool    - 'true' pokud kod obsahuje error, jinak 'false'
+*       size_t  - pozice erroru
+*/
+std::tuple<std::string, bool, size_t> CRC::Decode(const std::string &encoded, const Polynomial &generatingPolynomial)
 {
     const size_t r = generatingPolynomial.size() - 1;
     const size_t n = encoded.length();
 
     bool fixableError = pow(2, r) - 1 == n;
+    size_t errorPosition = 0;
 
     Polynomial encodedVec = this->ConvertToVector(encoded);
     Polynomial errorVec = this->DividePolynomials(encodedVec, generatingPolynomial);
-    Polynomial decodedVec(encodedVec.begin(), encodedVec.end() - r);
 
     bool error = !CheckIfOnlyZeroes(errorVec);
 
@@ -40,7 +56,6 @@ std::tuple<Polynomial, bool, size_t> CRC::Decode(const std::string &encoded, con
     {
         if (fixableError)
         {
-            size_t errorPosition = 0;
             Polynomial poisitionTest(1, '1');
 
             while (errorPosition < n)
@@ -50,30 +65,30 @@ std::tuple<Polynomial, bool, size_t> CRC::Decode(const std::string &encoded, con
                 poisitionTest.insert(poisitionTest.end(), '0');
                 errorPosition++;
             }
-
-            this->RepairError(decodedVec, errorPosition);
-            return std::tuple<Polynomial, bool, size_t>{decodedVec, true, errorPosition};
+            if (errorPosition == n)
+                throw std::runtime_error("Received code contains an unfixable error");
+            this->RepairError(encodedVec, errorPosition);
         }
         else
-        {
             throw std::runtime_error("Received code contains an unfixable error");
-        }
     }
 
-    return std::tuple<Polynomial, bool, size_t>{decodedVec, false, 0};
+    return std::tuple<std::string, bool, size_t>{std::string(encodedVec.begin(), encodedVec.end()), error, errorPosition};
 }
 
-/**
- * @brief Funkce najde vsechny mozne generujici polynomy g(z) na zaklade zadane delky celkove zpravy 'n' a stupne generujiciho polynomu 'r'
+/*
+ * Funkce najde vsechny mozne generujici polynomy g(z) na zaklade zadane delky celkove zpravy 'n' a stupne generujiciho polynomu 'r'
  * 
- * @param n delka cele zpravy (samotna zprava + generujici polynom)
- * @param r stupen generujiciho polynomu
- * @return Polynomial vektor reprezentujici generujici polynom
+ * Vstup:
+ *   n  - delka cele zpravy vcetne zabecpeni
+ *   r  - stupen generujiciho polynomu
+ * 
+ * Vystup
+ *   Polynomial - vektor reprezentujici generujici polynom
  */
 std::vector<Polynomial> CRC::FindGeneratingPolynomials(const size_t &n, const size_t &r)
 {
     std::vector<Polynomial> retVec;
-    bool undefined = true;
     Polynomial possiblePoly(2, '1');
 
     Polynomial zn(n + 1, '0');
@@ -88,22 +103,23 @@ std::vector<Polynomial> CRC::FindGeneratingPolynomials(const size_t &n, const si
         if (std::all_of(temp.begin(), temp.end(), [](unsigned char x){ return x == '0'; }))
         {
             retVec.push_back(possiblePoly);
-            undefined = false;
         }
         possiblePoly.erase(possiblePoly.begin() + 1, possiblePoly.end() - 1);
     }
     
     this->generatingPolynomials.push_back({n, r, retVec});
-    if (undefined) throw std::runtime_error("For a given combination of codeword length and degree of generating polynomial, no generating polynomial has been found");
 
     return retVec;
 }
 
 /**
- * @brief Prevede textovy retezec na vektor tak, ze jeden znak v retezci se stane jednim prvkem ve vektoru
+ * Prevede textovy retezec na vektor tak, ze jeden znak v retezci se stane jednim prvkem ve vektoru
  * 
- * @param str textovy retezec
- * @return Polynomial textovy retezec prevedeny na vektor
+ * Vstup:
+ *   str    - textovy retezec
+ * 
+ * Vystup:
+ *   Polynomial - textovy retezec prevedeny na vektor
  */
 Polynomial CRC::ConvertToVector(const std::string &str)
 {
@@ -115,35 +131,41 @@ Polynomial CRC::ConvertToVector(const std::string &str)
 }
 
 /**
- * @brief Provede deleni polynomu nad telesem GF(2) a navrati zbytek
+ * Provede modulo 2 deleni polynomu a navrati zbytek
  * 
- * @param nom citatel
- * @param denom jmenovatel
- * @return Polynomial zbytek po deleni
+ * Vstup: 
+ *   nom    - citatel
+ *   denom  - jmenovatel
+ * 
+ * Vystup
+ *   Polynomial - zbytek po deleni
  */
 Polynomial CRC::DividePolynomials(Polynomial nom, const Polynomial &denom)
 {
-    nom.erase(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
-    while (nom.size() >= denom.size())
+    size_t position = std::distance(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
+    //nom.erase(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
+    while (nom.size() - position  >= denom.size())
     {
-        for (size_t i = 0; i < denom.size(); i++)
-            nom[i] = XOR(nom[i], denom[i]);
-        
-        nom.erase(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
+        for (size_t i = position; i < position + denom.size(); i++)
+            nom[i] = XOR(nom[i], denom[i - position]);
+
+        position = std::distance(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
+        //nom.erase(nom.begin(), std::find(nom.begin(), nom.end(), '1'));
     }
-
+/*
     while (nom.size() != denom.size() - 1)
-        nom.insert(nom.begin(), '0');
+        nom.insert(nom.begin(), '0');*/
 
-    return nom;
+    return Polynomial(nom.end() - denom.size() + 1, nom.end());
 }
 
 /**
- * @brief Vygeneruje 'i'-tou kombinaci bitu o delce 'size'
+ * Vygeneruje 'i'-tou kombinaci bitu o delce 'size'
  * 
- * @param possiblePoly Mozny generujici polynom
- * @param i i-ta kombinace (decimalni cislo i bude prevedeno na binarni cislo)
- * @param size velikost polynomu (r + 1)
+ * Vstup:
+ *   possiblePoly   -Mozny generujici polynom
+ *   i  -i-ta kombinace (decimalni cislo i bude prevedeno na binarni cislo)
+ *   size   -velikost polynomu (r + 1)
  */
 const void CRC::MakeMiddleCoefs(Polynomial &possiblePoly, size_t i, const size_t &size)
 {
@@ -154,10 +176,20 @@ const void CRC::MakeMiddleCoefs(Polynomial &possiblePoly, size_t i, const size_t
     }
 }
 
-std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &k, const size_t &r, bool &success)
+/**
+ * Zkontroluje, zda-li pro pro danou kombinaci delky kodoveho slova a stupne generujiciho polynomu existuji
+ * generujici polynomy. Pokud ne, zavola funkci FindGeneratingPolynomial pro jejich vytvoreni.
+ * 
+ * Vstup:
+ *   k  - delka kodoveho slova
+ *   r  - stupen generujiciho polynomu
+ * 
+ * Vystup:
+ *   std::vector<Polynomial>    - vektor obsahujici vsechny nalezene generujici polynomy
+ */
+std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &k, const size_t &r)
 {
     std::vector<Polynomial> retVec;
-    success = true;
     const size_t n = k + r;
 
     for (const auto &i: this->generatingPolynomials)
@@ -165,7 +197,7 @@ std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &k, const 
         if (i.n == n && i.r == r)
         {
             if (i.polynomials.size() == 0)
-                success = false;
+                throw std::runtime_error("For a given combination of codeword length and degree of generating polynomial, no generating polynomial has been found");
             retVec = i.polynomials;
         }
     }
@@ -173,9 +205,18 @@ std::vector<Polynomial> CRC::ReturnGeneratingPolynomials(const size_t &k, const 
     if (retVec.size() == 0)
         retVec = this->FindGeneratingPolynomials(n, r);
 
-    return retVec;
+    return retVec.size() == 0 ? throw std::runtime_error("For a given combination of codeword length and degree of generating polynomial, no generating polynomial has been found") : retVec;
 }
 
+/**
+ * Prevede vektor reprezentujici polynom na matematicky zapis polynomu
+ * 
+ * Vstup:
+ *   Polynomial - polynom
+ * 
+ * Vystup:
+ *   std::string    - matematicky zapis polynomu
+ */
 std::string CRC::PrettifyPolynomialVector(const Polynomial &polynomial)
 {
     std::string retStr;
@@ -197,6 +238,15 @@ std::string CRC::PrettifyPolynomialVector(const Polynomial &polynomial)
     return retStr;
 }
 
+/**
+ * Pro danou delku kodoveho slova nalezne Hamminguv kod a navrati stupen generujiciho polynomu
+ * 
+ * Vstup:
+ *   k  - delka kodoveho slova
+ * 
+ * Vystup:
+ *   size_t - stupen generujiciho polynomu
+ */
 size_t CRC::FindHammingCode(const size_t &k)
 {
     size_t r = 1;
@@ -212,19 +262,13 @@ size_t CRC::FindHammingCode(const size_t &k)
     }
 }
 
-size_t CRC::BinToDec(const Polynomial &errorBinaryPosition)
-{
-    size_t dec = 0;
-    size_t len = errorBinaryPosition.size();
-
-    for (size_t i = 0; i < len; i++)
-    {
-        dec += (errorBinaryPosition[i] - '0')*pow(2, len - i - 1);
-    }
-
-    return dec;
-}
-
+/**
+ * Opravi chybu v 'decodedPolynomial' na pozici 'position'
+ * 
+ * Vstup:
+ *   decodedPolynomial  - polynom, obsahujici chybu
+ *   position   - pozice chyby
+ */
 const void CRC::RepairError(Polynomial &decodedPolynomial, const size_t &position)
 {
     unsigned char *repairElement = &decodedPolynomial[decodedPolynomial.size() - position - 1];
